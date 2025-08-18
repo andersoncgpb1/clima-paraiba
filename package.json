@@ -1,8 +1,9 @@
+// package.json
 {
   "name": "clima-pb",
   "version": "1.0.0",
   "type": "module",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js"
   },

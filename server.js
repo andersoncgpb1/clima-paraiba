@@ -4,10 +4,10 @@ import fetch from "node-fetch";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// sua chave da WeatherAPI
-const API_KEY = "5d0ba8b53e344994ad424037251608";
+// sua chave da OpenWeatherMap
+const API_KEY = "b4287a5c1971d7dc0de18a7304721da7";
 
-// lista de cidades da Paraíba
+// lista das 223 cidades da Paraíba
 const cidades = [
   "Água Branca","Aguiar","Alagoa Grande","Alagoa Nova","Alagoinha","Alcantil","Algodão de Jandaíra","Alhandra","Amparo","Aparecida",
   "Araçagi","Arara","Araruna","Areia","Areia de Baraúnas","Areial","Aroeiras","Assunção","Baía da Traição","Bananeiras",
@@ -34,7 +34,6 @@ const cidades = [
   "Uiraúna","Umbuzeiro","Várzea","Vieirópolis","Vista Serrana","Zabelê"
 ];
 
-
 // rota principal
 app.get("/", (req, res) => {
   res.send("🌤️ API Clima Paraíba - acesse /clima para ver os dados em tempo real.");
@@ -46,16 +45,17 @@ app.get("/clima", async (req, res) => {
     const resultados = await Promise.all(
       cidades.map(async (cidade) => {
         const response = await fetch(
-          `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${encodeURIComponent(
+          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
             cidade
-          )}&aqi=no`
+          )},BR&appid=${API_KEY}&units=metric&lang=pt_br`
         );
         const data = await response.json();
+
         return {
           cidade: cidade,
-          temperatura: data.current?.temp_c ?? "N/A",
-          condicao: data.current?.condition?.text ?? "N/A",
-          hora_local: data.location?.localtime ?? "N/A"
+          temperatura: data.main?.temp ?? "N/A",
+          condicao: data.weather?.[0]?.description ?? "N/A",
+          hora_local: new Date(data.dt * 1000).toLocaleString("pt-BR") // converte timestamp para horário local
         };
       })
     );

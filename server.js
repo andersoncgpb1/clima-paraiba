@@ -1,15 +1,9 @@
-// server.js
 import express from "express";
-import fetch from "node-fetch"; // Render suporta node-fetch se instalado
-import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.static("public"));
-
-// Principais cidades da Paraíba
+// Lista das cidades principais da Paraíba
 const cidades = [
   "João Pessoa",
   "Campina Grande",
@@ -25,21 +19,20 @@ const cidades = [
   "Bananeiras"
 ];
 
-// Função para traduzir condição do inglês para português
-function traduzirCondicao(condicao) {
-  condicao = condicao.toLowerCase();
-  if (condicao.includes("sun")) return "Ensolarado";
-  if (condicao.includes("cloud") && condicao.includes("night")) return "Nublado Noite";
-  if (condicao.includes("cloud") && condicao.includes("sun")) return "Nublado com Sol";
-  if (condicao.includes("cloud")) return "Nublado";
-  if (condicao.includes("rain") && condicao.includes("sun")) return "Chuva com Sol";
-  if (condicao.includes("rain")) return "Chuva";
-  if (condicao.includes("storm") && condicao.includes("sun")) return "Tempestade com sol";
-  if (condicao.includes("storm")) return "Tempestade";
+// Mapeamento das condições em inglês para português
+function traduzirCondicao(condition) {
+  const c = condition.toLowerCase();
+  if (c.includes("sunny") || c.includes("clear")) return "Ensolarado";
+  if (c.includes("partly cloudy")) return "Nublado com Sol";
+  if (c.includes("cloudy")) return "Nublado";
+  if (c.includes("rain") && c.includes("sun")) return "Chuva com Sol";
+  if (c.includes("rain")) return "Chuva";
+  if (c.includes("thunder") && c.includes("sun")) return "Tempestade com sol";
+  if (c.includes("thunder")) return "Tempestade";
   return "Ensolarado";
 }
 
-// Função para retornar o ícone correspondente
+// Função para retornar o ícone correto
 function getIcon(condition) {
   const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
   condition = condition.toLowerCase();
@@ -56,32 +49,36 @@ function getIcon(condition) {
   return iconesBase + "Ensolarado.png";
 }
 
-// Rota principal de clima
 app.get("/clima", async (req, res) => {
-  try {
-    const resultados = [];
+  const apiKey = "5d0ba8b53e344994ad424037251608";
+  const resultados = [];
 
-    for (const cidade of cidades) {
-      const url = `http://api.weatherapi.com/v1/current.json?key=5d0ba8b53e344994ad424037251608&q=${encodeURIComponent(cidade)}&aqi=no`;
-      const response = await fetch(url);
+  for (const cidade of cidades) {
+    try {
+      const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${encodeURIComponent(cidade)}&aqi=no`);
       const data = await response.json();
 
-      const condicaoPt = traduzirCondicao(data.current.condition.text);
-
+      const condicao = traduzirCondicao(data.current.condition.text);
       resultados.push({
-        cidade: data.location.name,
-        temperatura: Math.floor(data.current.temp_c), // somente inteiro
-        condicao: condicaoPt,
-        icone: getIcon(condicaoPt)
+        cidade,
+        temperatura: Math.floor(data.current.temp_c), // apenas inteiro
+        condicao,
+        icone: getIcon(condicao)
+      });
+    } catch (err) {
+      resultados.push({
+        cidade,
+        temperatura: "-",
+        condicao: "-",
+        icone: getIcon("Ensolarado")
       });
     }
-
-    res.json(resultados);
-  } catch (err) {
-    console.error("Erro ao buscar dados da API:", err);
-    res.status(500).json({ erro: "Erro ao buscar dados da API" });
   }
+
+  res.json(resultados);
 });
+
+app.use(express.static("public"));
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

@@ -41,19 +41,59 @@
       margin: 2px 0;
       color: #555;
     }
+    .add-city {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .add-city input {
+      padding: 5px 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin-right: 5px;
+    }
+    .add-city button {
+      padding: 5px 10px;
+      font-size: 14px;
+      border-radius: 5px;
+      border: none;
+      background-color: #1a3a6e;
+      color: white;
+      cursor: pointer;
+    }
+    .add-city button:hover {
+      background-color: #163161;
+    }
   </style>
 </head>
 <body>
   <h1>Clima nas Principais Cidades da Paraíba</h1>
+
+  <div class="add-city">
+    <input type="text" id="novaCidade" placeholder="Adicionar cidade">
+    <button onclick="adicionarCidade()">Adicionar</button>
+  </div>
+
   <div class="grid" id="clima-grid"></div>
 
   <script>
+    const cidadesManuais = [];
+
     async function carregarClima() {
+      const grid = document.getElementById('clima-grid');
+      grid.innerHTML = "";
+
+      // Combina cidades padrão e adicionadas manualmente
+      const todasCidades = [...cidadesManuais];
+
+      let url = "/clima";
+      if (todasCidades.length > 0) {
+        url += "?cidade=" + todasCidades.join(",");
+      }
+
       try {
-        const res = await fetch('/clima');
+        const res = await fetch(url);
         const dados = await res.json();
-        const grid = document.getElementById('clima-grid');
-        grid.innerHTML = ''; // limpa antes de preencher
 
         dados.forEach(cidade => {
           const card = document.createElement('div');
@@ -71,6 +111,17 @@
       }
     }
 
+    function adicionarCidade() {
+      const input = document.getElementById('novaCidade');
+      const cidade = input.value.trim();
+      if (cidade && !cidadesManuais.includes(cidade)) {
+        cidadesManuais.push(cidade);
+        input.value = "";
+        carregarClima();
+      }
+    }
+
+    // Carrega clima inicial das cidades padrão
     carregarClima();
   </script>
 </body>

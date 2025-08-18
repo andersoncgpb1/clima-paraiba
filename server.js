@@ -3,8 +3,8 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Lista das principais cidades da Paraíba
-const cidades = [
+// Lista padrão das principais cidades da Paraíba
+let cidadesPadrao = [
   "João Pessoa",
   "Campina Grande",
   "Santa Rita",
@@ -19,26 +19,9 @@ const cidades = [
   "Bananeiras"
 ];
 
-// Função para normalizar o nome da cidade (remover acentos)
-function normalizarCidade(nome) {
-  return nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
+const API_KEY = "5d0ba8b53e344994ad424037251608";
 
-// Função para traduzir condição do inglês para português
-function traduzirCondicao(cond) {
-  cond = cond.toLowerCase();
-  if (cond.includes("sun")) return "Ensolarado";
-  if (cond.includes("cloud") && cond.includes("night")) return "Nublado Noite";
-  if (cond.includes("cloud") && cond.includes("sun")) return "Nublado com Sol";
-  if (cond.includes("cloud")) return "Nublado";
-  if (cond.includes("rain") && cond.includes("sun")) return "Chuva com Sol";
-  if (cond.includes("rain")) return "Chuva";
-  if (cond.includes("storm") && cond.includes("sun")) return "Tempestade com sol";
-  if (cond.includes("storm")) return "Tempestade";
-  return cond; // Padrão
-}
-
-// Função para pegar o ícone correspondente
+// Converte a condição em português para escolher o ícone
 function getIcon(condition) {
   const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
   condition = condition.toLowerCase();
@@ -56,31 +39,48 @@ function getIcon(condition) {
   return iconesBase + "Ensolarado.png";
 }
 
-// Endpoint de clima
+// Mapeia condições do inglês para português
+function traduzirCondicao(cond) {
+  cond = cond.toLowerCase();
+  if (cond.includes("sun")) return "Ensolarado";
+  if (cond.includes("cloud") && cond.includes("night")) return "Nublado Noite";
+  if (cond.includes("cloud") && cond.includes("sun")) return "Nublado com Sol";
+  if (cond.includes("cloud")) return "Nublado";
+  if (cond.includes("rain") && cond.includes("sun")) return "Chuva com Sol";
+  if (cond.includes("rain")) return "Chuva";
+  if (cond.includes("storm") && cond.includes("sun")) return "Tempestade com sol";
+  if (cond.includes("storm")) return "Tempestade";
+  return "Ensolarado";
+}
+
+// Endpoint principal
 app.get("/clima", async (req, res) => {
-  const apiKey = "5d0ba8b53e344994ad424037251608";
+  const cidadeQuery = req.query.cidade;
+  let cidades = cidadeQuery ? [cidadeQuery] : cidadesPadrao;
+
   const resultados = [];
 
-  for (const cidade of cidades) {
+  for (let cidade of cidades) {
     try {
-      // Normaliza o nome da cidade e adiciona ', Brazil' para a API
-      const cidadeQuery = encodeURIComponent(normalizarCidade(cidade) + ", Brazil");
-      const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=${apiKey}&q=${cidadeQuery}&aqi=no`);
-      const data = await response.json();
+      const url = `http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${encodeURIComponent(cidade)}&aqi=no`;
+      const resp = await fetch(url);
+      const data = await resp.json();
 
-      const condicao = traduzirCondicao(data.current.condition.text);
+      // Traduz condição para português
+      const condPort = traduzirCondicao(data.current.condition.text);
+
       resultados.push({
-        cidade,
-        temperatura: Math.floor(data.current.temp_c), // Apenas inteiros
-        condicao,
-        icone: getIcon(condicao)
+        cidade: data.location.name,
+        temperatura: Math.floor(data.current.temp_c),
+        condicao: condPort,
+        icone: getIcon(condPort)
       });
     } catch (err) {
-      console.error("Erro ao buscar clima de", cidade, err);
+      console.error("Erro ao buscar clima da cidade:", cidade, err);
       resultados.push({
         cidade,
-        temperatura: "-",
-        condicao: "-",
+        temperatura: "N/A",
+        condicao: "N/A",
         icone: getIcon("Ensolarado")
       });
     }
@@ -89,7 +89,7 @@ app.get("/clima", async (req, res) => {
   res.json(resultados);
 });
 
-// Servir arquivos estáticos (index.html, CSS, JS)
+// Servir arquivos estáticos (index.html, CSS, etc.)
 app.use(express.static("public"));
 
 app.listen(PORT, () => {

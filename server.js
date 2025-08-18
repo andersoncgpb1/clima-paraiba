@@ -1,10 +1,12 @@
+// server.js
 import express from "express";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const API_KEY = "5d0ba8b53e344994ad424037251608"; // Sua chave WeatherAPI
 
-// Lista padrão das principais cidades da Paraíba
-let cidadesPadrao = [
+// Lista de cidades da Paraíba
+const cidadesPB = [
   "João Pessoa",
   "Campina Grande",
   "Santa Rita",
@@ -19,9 +21,7 @@ let cidadesPadrao = [
   "Bananeiras"
 ];
 
-const API_KEY = "5d0ba8b53e344994ad424037251608";
-
-// Converte a condição em português para escolher o ícone
+// Função para obter ícone de clima
 function getIcon(condition) {
   const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
   condition = condition.toLowerCase();
@@ -39,59 +39,50 @@ function getIcon(condition) {
   return iconesBase + "Ensolarado.png";
 }
 
-// Mapeia condições do inglês para português
-function traduzirCondicao(cond) {
-  cond = cond.toLowerCase();
-  if (cond.includes("sun")) return "Ensolarado";
-  if (cond.includes("cloud") && cond.includes("night")) return "Nublado Noite";
-  if (cond.includes("cloud") && cond.includes("sun")) return "Nublado com Sol";
-  if (cond.includes("cloud")) return "Nublado";
-  if (cond.includes("rain") && cond.includes("sun")) return "Chuva com Sol";
-  if (cond.includes("rain")) return "Chuva";
-  if (cond.includes("storm") && cond.includes("sun")) return "Tempestade com sol";
-  if (cond.includes("storm")) return "Tempestade";
-  return "Ensolarado";
-}
-
-// Endpoint principal
+// Endpoint que retorna o clima
 app.get("/clima", async (req, res) => {
-  const cidadeQuery = req.query.cidade;
-  let cidades = cidadeQuery ? [cidadeQuery] : cidadesPadrao;
+  try {
+    const resultados = [];
 
-  const resultados = [];
+    for (const cidade of cidadesPB) {
+      const query = encodeURIComponent(`${cidade}, PB, Brazil`);
+      const url = `http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${query}&aqi=no`;
 
-  for (let cidade of cidades) {
-    try {
-      const url = `http://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${encodeURIComponent(cidade)}&aqi=no`;
-      const resp = await fetch(url);
-      const data = await resp.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-      // Traduz condição para português
-      const condPort = traduzirCondicao(data.current.condition.text);
+      if (data.current) {
+        const temperatura = Math.floor(data.current.temp_c); // apenas número inteiro
+        const condicao = data.current.condition.text;
+        const icone = getIcon(condicao);
 
-      resultados.push({
-        cidade: data.location.name,
-        temperatura: Math.floor(data.current.temp_c),
-        condicao: condPort,
-        icone: getIcon(condPort)
-      });
-    } catch (err) {
-      console.error("Erro ao buscar clima da cidade:", cidade, err);
-      resultados.push({
-        cidade,
-        temperatura: "N/A",
-        condicao: "N/A",
-        icone: getIcon("Ensolarado")
-      });
+        resultados.push({
+          cidade,
+          temperatura,
+          condicao,
+          icone
+        });
+      } else {
+        resultados.push({
+          cidade,
+          temperatura: "N/A",
+          condicao: "N/A",
+          icone: getIcon("ensolarado")
+        });
+      }
     }
-  }
 
-  res.json(resultados);
+    res.json(resultados);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ erro: "Erro ao buscar dados da API", detalhes: err.message });
+  }
 });
 
-// Servir arquivos estáticos (index.html, CSS, etc.)
+// Servir arquivos estáticos do public
 app.use(express.static("public"));
 
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

@@ -24,8 +24,12 @@ const GROUP_DELAY_MS = 1000;     // 1s entre grupos, para evitar rate limit
 // Cache em memória
 let cache = { data: null, expiresAt: 0 };
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public"))); // serve /public/index.html
+app.use(express.static("public"));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 
 // Util
 const delay = (ms) => new Promise(r => setTimeout(r, ms));

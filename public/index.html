@@ -53,6 +53,7 @@
         const res = await fetch('/clima');
         const dados = await res.json();
         const grid = document.getElementById('clima-grid');
+        grid.innerHTML = ''; // limpa antes de preencher
 
         dados.forEach(cidade => {
           const card = document.createElement('div');

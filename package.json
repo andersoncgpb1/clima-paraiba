@@ -2,9 +2,9 @@
   "name": "clima-pb",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",

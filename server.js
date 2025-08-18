@@ -1,11 +1,10 @@
 import express from "express";
 import fetch from "node-fetch";
-import * as cheerio from "cheerio";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Lista completa das 223 cidades da Paraíba (exemplo parcial, você adiciona todas)
+// Lista completa das 223 cidades da Paraíba
 const cidadesPB = [
   "Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova", "Alagoinha",
   "Alcantil", "Algodão de Jandaíra", "Alhandra", "Amparo", "Aparecida",
@@ -54,24 +53,23 @@ const cidadesPB = [
   "Vieirópolis", "Vista Serrana", "Zabelê"
 ];
 
-// Função para buscar temperatura no MSN Clima
+// Função para buscar temperatura via Weather Underground
 async function getClima(cidade) {
   try {
-    const url = `https://www.msn.com/pt-br/clima/forecast/${encodeURIComponent(cidade)}`;
+    const API_KEY = "839f9d68e89a408f9f9d68e89a008fd7";
+    const url = `https://api.weather.com/v3/wx/conditions/current?apiKey=${API_KEY}&format=json&language=pt-BR&location=${encodeURIComponent(cidade)},PB`;
     const res = await fetch(url);
-    const html = await res.text();
-    const $ = cheerio.load(html);
+    const data = await res.json();
 
-    // Seletor atualizado para temperatura
-    const tempText = $(".current-temp").first().text() || "N/A";
-    const temperatura = tempText.replace("°", "").trim();
+    const temperatura = data.temperature ?? "N/A";
+
     return {
-      cidade: cidade,
-      temperatura: temperatura ? Math.round(Number(temperatura)) : "N/A"
+      cidade,
+      temperatura: temperatura !== "N/A" ? Math.round(temperatura) : "N/A"
     };
   } catch (err) {
     return {
-      cidade: cidade,
+      cidade,
       temperatura: "N/A"
     };
   }
@@ -88,11 +86,10 @@ app.get("/clima", async (req, res) => {
     const resultados = await Promise.all(cidadesPB.map(getClima));
     res.json({ clima: resultados });
   } catch (err) {
-    res.status(500).json({ erro: "Erro ao buscar dados do MSN Clima", detalhes: err.message });
+    res.status(500).json({ erro: "Erro ao buscar dados do Weather Underground", detalhes: err.message });
   }
 });
 
-// Inicia servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

@@ -1,10 +1,15 @@
 // server.js
 import express from "express";
+import fetch from "node-fetch"; // Render suporta node-fetch se instalado
+import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Lista das principais cidades da Paraíba
+app.use(cors());
+app.use(express.static("public"));
+
+// Principais cidades da Paraíba
 const cidades = [
   "João Pessoa",
   "Campina Grande",
@@ -18,81 +23,66 @@ const cidades = [
   "Picuí",
   "Cajazeiras",
   "Bananeiras"
-  
 ];
 
+// Função para traduzir condição do inglês para português
 function traduzirCondicao(condicao) {
-  const mapa = {
-    "Sunny": "Ensolarado",
-    "Clear": "Ensolarado",
-    "Partly cloudy": "Nublado com Sol",
-    "Cloudy": "Nublado",
-    "Overcast": "Nublado",
-    "Mist": "Nublado",
-    "Patchy rain possible": "Chuva",
-    "Patchy snow possible": "Neve",
-    "Patchy sleet possible": "Neve",
-    "Patchy freezing drizzle possible": "Chuva",
-    "Thundery outbreaks possible": "Tempestade",
-    "Blowing snow": "Neve",
-    "Blizzard": "Neve",
-    "Fog": "Nublado",
-    "Freezing fog": "Nublado",
-    "Patchy light drizzle": "Chuva",
-    "Light drizzle": "Chuva",
-    "Heavy drizzle": "Chuva",
-    "Patchy light rain": "Chuva",
-    "Light rain": "Chuva",
-    "Moderate rain at times": "Chuva",
-    "Moderate rain": "Chuva",
-    "Heavy rain at times": "Chuva",
-    "Heavy rain": "Chuva",
-    "Light snow": "Neve",
-    "Moderate snow": "Neve",
-    "Heavy snow": "Neve",
-    "Thunderstorm": "Tempestade",
-    "Patchy light rain with thunder": "Tempestade com Sol",
-    "Moderate or heavy rain with thunder": "Tempestade",
-    // Adicione outras conforme necessidade
-  };
-
-  return mapa[condicao] || condicao; // se não encontrar, retorna original
+  condicao = condicao.toLowerCase();
+  if (condicao.includes("sun")) return "Ensolarado";
+  if (condicao.includes("cloud") && condicao.includes("night")) return "Nublado Noite";
+  if (condicao.includes("cloud") && condicao.includes("sun")) return "Nublado com Sol";
+  if (condicao.includes("cloud")) return "Nublado";
+  if (condicao.includes("rain") && condicao.includes("sun")) return "Chuva com Sol";
+  if (condicao.includes("rain")) return "Chuva";
+  if (condicao.includes("storm") && condicao.includes("sun")) return "Tempestade com sol";
+  if (condicao.includes("storm")) return "Tempestade";
+  return "Ensolarado";
 }
 
+// Função para retornar o ícone correspondente
+function getIcon(condition) {
+  const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
+  condition = condition.toLowerCase();
 
-// Endpoint para retornar dados em JSON (pode ser usado pelo vMix)
+  if (condition.includes("chuva") && condition.includes("sol")) return iconesBase + "Chuva com Sol.png";
+  if (condition.includes("chuva")) return iconesBase + "Chuva.png";
+  if (condition.includes("tempestade") && condition.includes("sol")) return iconesBase + "Tempestade com sol.png";
+  if (condition.includes("tempestade")) return iconesBase + "Tempestade.png";
+  if (condition.includes("ensolarado")) return iconesBase + "Ensolarado.png";
+  if (condition.includes("nublado") && condition.includes("sol")) return iconesBase + "Nublado com Sol.png";
+  if (condition.includes("nublado") && condition.includes("noite")) return iconesBase + "Nublado Noite.png";
+  if (condition.includes("nublado")) return iconesBase + "Nublado.png";
+
+  return iconesBase + "Ensolarado.png";
+}
+
+// Rota principal de clima
 app.get("/clima", async (req, res) => {
-  const resultados = [];
+  try {
+    const resultados = [];
 
-  for (let cidade of cidades) {
-    try {
-      const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=5d0ba8b53e344994ad424037251608&q=${encodeURIComponent(cidade)}&aqi=no`);
+    for (const cidade of cidades) {
+      const url = `http://api.weatherapi.com/v1/current.json?key=5d0ba8b53e344994ad424037251608&q=${encodeURIComponent(cidade)}&aqi=no`;
+      const response = await fetch(url);
       const data = await response.json();
 
- const condicaoPt = traduzirCondicao(data.current.condition.text);
+      const condicaoPt = traduzirCondicao(data.current.condition.text);
 
-resultados.push({
-  cidade: data.location.name,
-  temperatura: Math.floor(data.current.temp_c), // apenas inteiro
-  condicao: condicaoPt,
-  icone: getIcon(condicaoPt)
-});
-
-    } catch (err) {
       resultados.push({
-        cidade,
-        erro: "Não foi possível obter dados",
-        detalhes: err.message
+        cidade: data.location.name,
+        temperatura: Math.floor(data.current.temp_c), // somente inteiro
+        condicao: condicaoPt,
+        icone: getIcon(condicaoPt)
       });
     }
-  }
 
-  res.json(resultados);
+    res.json(resultados);
+  } catch (err) {
+    console.error("Erro ao buscar dados da API:", err);
+    res.status(500).json({ erro: "Erro ao buscar dados da API" });
+  }
 });
 
-// Servir arquivos estáticos (index.html, css, etc.)
-app.use(express.static("public"));
-
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });

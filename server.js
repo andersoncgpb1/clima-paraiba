@@ -1,88 +1,74 @@
+// server.js
 import express from "express";
-import https from "https";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// API key WeatherAPI
-const API_KEY = "5d0ba8b53e344994ad424037251608";
-
-// Principais cidades da Paraíba por população
+// Lista das principais cidades da Paraíba
 const cidades = [
   "João Pessoa",
   "Campina Grande",
   "Santa Rita",
-  "Patos",
   "Bayeux",
-  "Cabedelo",
+  "Patos",
   "Guarabira",
+  "Cabedelo",
   "Sousa",
+  "Esperança",
+  "Picuí",
   "Cajazeiras",
-  "Sapé"
-  "Guarabira"
   "Bananeiras"
-  "Cajazeiras"
+  
 ];
 
-// Função para buscar clima
-function buscarClima(cidade) {
-  return new Promise((resolve, reject) => {
-    const url = `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${encodeURIComponent(cidade)}&aqi=no`;
-
-    https.get(url, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json);
-        } catch (err) {
-          reject(err);
-        }
-      });
-    }).on("error", (err) => reject(err));
-  });
-}
-
-// Mapear condição do tempo para ícones do GitHub
-function mapIcon(condition) {
-  const baseURL = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/d68cf29407da1a8caaf56b4ab2a387b863f01d3f/icones/Clima/";
+// Função para mapear condição do tempo para ícone do GitHub
+function getIcon(condition) {
+  const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
   condition = condition.toLowerCase();
 
-  if (condition.includes("sol") && condition.includes("chuva")) return baseURL + "Chuva com Sol.png";
-  if (condition.includes("sol") && condition.includes("nublado")) return baseURL + "Nublado com Sol.png";
-  if (condition.includes("nublado") && condition.includes("noite")) return baseURL + "Nublado Noite.png";
-  if (condition.includes("nublado")) return baseURL + "Nublado.png";
-  if (condition.includes("sol") || condition.includes("ensolarado")) return baseURL + "Ensolarado.png";
-  if (condition.includes("chuva") && condition.includes("noite")) return baseURL + "Chuva Noite.png";
-  if (condition.includes("chuva")) return baseURL + "Chuva.png";
-  if (condition.includes("tempestade") && condition.includes("noite")) return baseURL + "Tempestade Noite.png";
-  if (condition.includes("tempestade") && condition.includes("sol")) return baseURL + "Tempestade com sol.png";
-  if (condition.includes("tempestade")) return baseURL + "Tempestade.png";
+  if (condition.includes("chuva") && condition.includes("sol")) return iconesBase + "Chuva com Sol.png";
+  if (condition.includes("chuva")) return iconesBase + "Chuva.png";
+  if (condition.includes("tempestade") && condition.includes("sol")) return iconesBase + "Tempestade com sol.png";
+  if (condition.includes("tempestade")) return iconesBase + "Tempestade.png";
+  if (condition.includes("ensolarado")) return iconesBase + "Ensolarado.png";
+  if (condition.includes("nublado") && condition.includes("sol")) return iconesBase + "Nublado com Sol.png";
+  if (condition.includes("nublado") && condition.includes("noite")) return iconesBase + "Nublado Noite.png";
+  if (condition.includes("nublado")) return iconesBase + "Nublado.png";
 
-  return baseURL + "Ensolarado.png"; // ícone default
+  // padrão
+  return iconesBase + "Ensolarado.png";
 }
 
-// Endpoint do vMix
+// Endpoint para retornar dados em JSON (pode ser usado pelo vMix)
 app.get("/clima", async (req, res) => {
-  try {
-    const resultados = await Promise.all(
-      cidades.map(async (cidade) => {
-        const data = await buscarClima(cidade);
-        return {
-          cidade: cidade,
-          temperatura: data.current.temp_c,
-          condicao: data.current.condition.text,
-          icone: mapIcon(data.current.condition.text),
-        };
-      })
-    );
-    res.json(resultados);
-  } catch (err) {
-    res.status(500).json({ erro: "Erro ao buscar dados da API", detalhes: err.message });
+  const resultados = [];
+
+  for (let cidade of cidades) {
+    try {
+      const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=5d0ba8b53e344994ad424037251608&q=${encodeURIComponent(cidade)}&aqi=no`);
+      const data = await response.json();
+
+      resultados.push({
+        cidade: data.location.name,
+        temperatura: data.current.temp_c,
+        condicao: data.current.condition.text,
+        icone: getIcon(data.current.condition.text)
+      });
+    } catch (err) {
+      resultados.push({
+        cidade,
+        erro: "Não foi possível obter dados",
+        detalhes: err.message
+      });
+    }
   }
+
+  res.json(resultados);
 });
 
+// Servir arquivos estáticos (index.html, css, etc.)
+app.use(express.static("public"));
+
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

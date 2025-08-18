@@ -249,11 +249,7 @@ app.get("/clima", async (req, res) => {
 
         return {
           cidade: cidade.nome,
-          temperatura: data.main?.temp ? Math.round(data.main.temp) : "N/A",
-          condicao: data.weather?.[0]?.description ?? "N/A",
-          hora_local: data.dt
-            ? new Date(data.dt * 1000).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })
-            : "N/A"
+          temperatura: data.main?.temp ? Math.round(data.main.temp) : "N/A"
         };
       })
     );
@@ -263,7 +259,6 @@ app.get("/clima", async (req, res) => {
     res.status(500).json({ erro: "Erro ao buscar dados da API", detalhes: error.message });
   }
 });
-
 
 // inicia o servidor
 app.listen(PORT, () => {

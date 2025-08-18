@@ -86,15 +86,21 @@ app.get("/", (req, res) => {
 });
 
 // Rota /clima
-app.get("/clima", async (req, res) => {
+app.get("/", async (req, res) => {
   try {
-    const resultados = await Promise.all(cidadesPB.map(getClima));
-    res.json({ clima: resultados });
+    const results = [];
+    for (const cidade of cidadesPB) {
+      const url = `https://api.weather.com/v3/...&lat=${cidade.lat}&lon=${cidade.lon}&apiKey=${apiKey}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      results.push({ cidade: cidade.nome, temperatura: data.temperature });
+    }
+    res.json(results);
   } catch (err) {
-    res.status(500).json({ erro: "Erro ao buscar dados do Weather Underground", detalhes: err.message });
+    res.json({ erro: "Erro ao buscar dados da API", detalhes: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+app.listen(port, () => {
+  console.log(`Servidor rodando na porta ${port}`);
 });

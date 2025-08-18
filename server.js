@@ -251,7 +251,9 @@ app.get("/clima", async (req, res) => {
           cidade: cidade.nome,
           temperatura: data.main?.temp ? Math.round(data.main.temp) : "N/A",
           condicao: data.weather?.[0]?.description ?? "N/A",
-          hora_local: new Date(data.dt * 1000).toLocaleString("pt-BR")
+          hora_local: data.dt
+            ? new Date(data.dt * 1000).toLocaleString("pt-BR", { timeZone: "America/Fortaleza" })
+            : "N/A"
         };
       })
     );

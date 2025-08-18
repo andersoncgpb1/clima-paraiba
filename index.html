@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Clima na Paraíba</title>
+  <meta name="description" content="Temperatura atual nas 223 cidades da Paraíba, com busca, ordenação e atualização periódica."/>
+  <style>
+    :root {
+      --primary: #1a3a6e;
+      --secondary: #ffcc00;
+      --text: #ffffff;
+      --background: #0d1f3d;
+      --card-bg: rgba(26, 58, 110, 0.7);
+      --highlight: #3a6ebd;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--background);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      background-image: linear-gradient(to bottom, #0a1830, #1a3a6e);
+      min-height: 100vh;
+    }
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 {
+      color: var(--secondary);
+      font-size: 2.2rem;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    }
+    .subtitle {
+      font-size: .95rem;
+      opacity: .85;
+    }
+    .controls {
+      display: flex; justify-content: center; gap: 12px;
+      margin: 18px auto 22px; flex-wrap: wrap; max-width: 1100px;
+    }
+    .search-container { flex: 1; max-width: 520px; min-width: 260px; }
+    .search-input {
+      padding: 12px 18px; width: 100%; border: none; border-radius: 30px;
+      font-size: 1rem; background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 10px rgba(0,0,0,.12); outline: none;
+    }
+    .sort-container { display: flex; gap: 10px; }
+    .sort-btn {
+      padding: 12px 15px; background-color: var(--highlight);
+      color: white; border: none; border-radius: 30px; cursor: pointer;
+      transition: all .25s ease; font-weight: 600;
+    }
+    .sort-btn:hover { background-color: var(--secondary); color: var(--primary); }
+    .container {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px; max-width: 1200px; margin: 0 auto;
+    }
+    .city-card {
+      background-color: var(--card-bg); border-radius: 16px; padding: 16px 18px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25); transition: all .25s ease;
+      backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.09);
+    }
+    .city-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 14px 28px rgba(0,0,0,.32);
+      background-color: rgba(26, 58, 110, 0.9);
+    }
+    .card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+    .weather-icon { width: 68px; height: 68px; object-fit: contain; }
+    .city-info { flex: 1; }
+    .city-name {
+      font-size: 1.2rem; margin: 0 0 4px 0; color: var(--secondary); font-weight: 700;
+    }
+    .temperature { font-size: 1.9rem; margin: 0; font-weight: 800; }
+    .weather-condition { font-size: .95rem; margin: 4px 0 0; opacity: .9; text-transform: capitalize; }
+    .meta { font-size: .8rem; opacity: .75; margin-top: 8px; }
+    .loading, .error, .empty {
+      text-align: center; padding: 20px; font-size: 1.1rem; grid-column: 1 / -1;
+    }
+    .loading { color: var(--secondary); }
+    .error { color: #ff6b6b; }
+    .last-update {
+      text-align: center; margin-top: 18px; font-size: .9rem; opacity: .7; grid-column: 1 / -1;
+    }
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+      .header h1 { font-size: 1.8rem; }
+      .controls { flex-direction: column; align-items: center; }
+      .search-container { width: 100%; }
+    }
+    @keyframes pulse { 0%{opacity:.6} 50%{opacity:1} 100%{opacity:.6} }
+    .pulse { animation: pulse 1.5s infinite; }
+    .toolbar { display:flex; gap:10px; justify-content:center; margin: 0 auto 10px; flex-wrap: wrap; }
+    .toolbar small { opacity:.8 }
+    .badge {
+      background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.15);
+      padding: 6px 10px; border-radius: 999px; font-size: .8rem;
+    }
+  </style>
+  <link rel="preconnect" href="https://raw.githubusercontent.com">
+  <link rel="dns-prefetch" href="https://raw.githubusercontent.com">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+  <div class="header">
+    <h1>Clima na Paraíba</h1>
+    <div class="subtitle">Temperatura atual nas 223 cidades • busca + ordenação • atualização a cada 15 min</div>
+  </div>
+
+  <div class="controls">
+    <div class="search-container">
+      <input type="text" class="search-input" placeholder="Pesquisar cidade..." id="searchInput">
+    </div>
+    <div class="sort-container">
+      <button class="sort-btn" id="sortTemp"><i class="fas fa-temperature-low"></i> Temperatura</button>
+      <button class="sort-btn" id="sortName"><i class="fas fa-sort-alpha-down"></i> Nome</button>
+      <button class="sort-btn" id="refreshBtn"><i class="fas fa-rotate"></i> Atualizar</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="badge" id="countBadge">0 cidades</span>
+    <small class="badge">Fonte: OpenWeatherMap</small>
+    <small class="badge">Fuso: GMT-3</small>
+  </div>
+
+  <div class="container" id="weatherContainer">
+    <div class="loading pulse">
+      <i class="fas fa-spinner fa-spin"></i> Carregando dados meteorológicos...
+    </div>
+  </div>
+
+  <div class="last-update" id="lastUpdate"></div>
+
+  <script>
+    // ========= CONFIG =========
+    // Coloque sua chave para fallback direto na OpenWeather (se você NÃO tiver backend /clima)
+    const OPENWEATHER_API_KEY = "b4287a5c1971d7dc0de18a7304721da7"; // ex.: "b4287a5c1971d7dc0de18a7304721da7" — deixe vazio para tentar /clima primeiro
+    const UPDATE_INTERVAL_MS = 15 * 60 * 1000; // 15 min
+    const BATCH_SIZE = 50; // tamanho do lote por chamadas diretas no cliente
+    const BATCH_DELAY_MS = 2000; // atraso entre lotes (2s)
+    // ==========================
+
+    const weatherContainer = document.getElementById('weatherContainer');
+    const searchInput = document.getElementById('searchInput');
+    const sortTempBtn = document.getElementById('sortTemp');
+    const sortNameBtn = document.getElementById('sortName');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const countBadge = document.getElementById('countBadge');
+
+    // Ícones do basmilius
+    const iconsBaseUrl = 'https://raw.githubusercontent.com/basmilius/weather-icons/dev/design/line/final/';
+    const weatherIcons = {
+      "01d": "clear-day.svg",               "01n": "clear-night.svg",
+      "02d": "partly-cloudy-day.svg",       "02n": "partly-cloudy-night.svg",
+      "03d": "cloudy.svg",                  "03n": "cloudy.svg",
+      "04d": "overcast-day.svg",            "04n": "overcast-night.svg",
+      "09d": "rain.svg",                    "09n": "rain.svg",
+      "10d": "partly-cloudy-day-rain.svg",  "10n": "partly-cloudy-night-rain.svg",
+      "11d": "thunderstorms-day.svg",       "11n": "thunderstorms-night.svg",
+      "13d": "snow.svg",                    "13n": "snow.svg",
+      "50d": "fog-day.svg",                 "50n": "fog-night.svg",
+      "default": "not-available.svg"
+    };
+
+    // ======== Lista com 223 cidades (nome + id OpenWeather) ========
+    // Dica: se preferir, você pode mover essa lista para /cidades.json e fazer um fetch único.
+    const cities = [
+      { name: "Água Branca", id: 3407961 },
+      { name: "Aguiar", id: 3407965 },
+      { name: "Alagoa Grande", id: 3408096 },
+      { name: "Alagoa Nova", id: 3408097 },
+      { name: "Alagoinha", id: 3408103 },
+      { name: "Alcantil", id: 3408121 },
+      { name: "Algodão de Jandaíra", id: 3408138 },
+      { name: "Alhandra", id: 3408166 },
+      { name: "Amparo", id: 3407616 },
+      { name: "Aparecida", id: 3407385 },
+      { name: "Araçagi", id: 3407360 },
+      { name: "Arara", id: 3407346 },
+      { name: "Araruna", id: 3407344 },
+      { name: "Areia", id: 3407216 },
+      { name: "Areia de Baraúnas", id: 3407214 },
+      { name: "Areial", id: 3407212 },
+      { name: "Aroeiras", id: 3407069 },
+      { name: "Assunção", id: 3407028 },
+      { name: "Baía da Traição", id: 3406924 },
+      { name: "Bananeiras", id: 3406496 },
+      { name: "Baraúna", id: 3406441 },
+      { name: "Barra de Santa Rosa", id: 3406409 },
+      { name: "Barra de Santana", id: 3406408 },
+      { name: "Barra de São Miguel", id: 3406407 },
+      { name: "Bayeux", id: 3407982 },
+      { name: "Belém", id: 3405930 },
+      { name: "Belém do Brejo do Cruz", id: 3405929 },
+      { name: "Bernardino Batista", id: 3405914 },
+      { name: "Boa Ventura", id: 3405747 },
+      { name: "Boa Vista", id: 3405733 },
+      { name: "Bom Jesus", id: 3405661 },
+      { name: "Bom Sucesso", id: 3405641 },
+      { name: "Bonito de Santa Fé", id: 3405631 },
+      { name: "Boqueirão", id: 3405608 },
+      { name: "Borborema", id: 3405585 },
+      { name: "Brejo do Cruz", id: 3405456 },
+      { name: "Brejo dos Santos", id: 3405455 },
+      { name: "Caaporã", id: 3404594 },
+      { name: "Cabaceiras", id: 3404578 },
+      { name: "Cabedelo", id: 3404558 },
+      { name: "Cachoeira dos Índios", id: 3404508 },
+      { name: "Cacimba de Areia", id: 3404497 },
+      { name: "Cacimba de Dentro", id: 3404496 },
+      { name: "Cacimbas", id: 3404495 },
+      { name: "Caiçara", id: 3404414 },
+      { name: "Cajazeiras", id: 3404115 },
+      { name: "Cajazeirinhas", id: 3404114 },
+      { name: "Caldas Brandão", id: 3403923 },
+      { name: "Camalaú", id: 3403878 },
+      { name: "Campina Grande", id: 3403642 },
+      { name: "Capim", id: 3403254 },
+      { name: "Caraúbas", id: 3403150 },
+      { name: "Carrapateira", id: 3403099 },
+      { name: "Casserengue", id: 3402684 },
+      { name: "Catingueira", id: 3402663 },
+      { name: "Catolé do Rocha", id: 3402381 },
+      { name: "Caturité", id: 3402369 },
+      { name: "Conceição", id: 3401843 },
+      { name: "Condado", id: 3401831 },
+      { name: "Conde", id: 3401828 },
+      { name: "Congo", id: 3401813 },
+      { name: "Coremas", id: 3401734 },
+      { name: "Coxixola", id: 3401562 },
+      { name: "Cruz do Espírito Santo", id: 3401439 },
+      { name: "Cubati", id: 3401406 },
+      { name: "Cuité", id: 3401384 },
+      { name: "Cuité de Mamanguape", id: 3401383 },
+      { name: "Cuitegi", id: 3401382 },
+      { name: "Curral de Cima", id: 3401353 },
+      { name: "Curral Velho", id: 3401352 },
+      { name: "Damião", id: 3401267 },
+      { name: "Desterro", id: 3401093 },
+      { name: "Diamante", id: 3401075 },
+      { name: "Dona Inês", id: 3400933 },
+      { name: "Duas Estradas", id: 3400907 },
+      { name: "Emas", id: 3400775 },
+      { name: "Esperança", id: 3400736 },
+      { name: "Fagundes", id: 3400569 },
+      { name: "Frei Martinho", id: 3400308 },
+      { name: "Gado Bravo", id: 3399769 },
+      { name: "Guarabira", id: 3398570 },
+      { name: "Gurinhém", id: 3398459 },
+      { name: "Gurjão", id: 3398458 },
+      { name: "Ibiara", id: 3398379 },
+      { name: "Igaracy", id: 3398309 },
+      { name: "Imaculada", id: 3398268 },
+      { name: "Ingá", id: 3398240 },
+      { name: "Itabaiana", id: 3398076 },
+      { name: "Itaporanga", id: 3397939 },
+      { name: "Itapororoca", id: 3397938 },
+      { name: "Itatuba", id: 3397891 },
+      { name: "Jacaraú", id: 3397780 },
+      { name: "Jericó", id: 3397541 },
+      { name: "João Pessoa", id: 3397277 },
+      { name: "Juarez Távora", id: 3397154 },
+      { name: "Juazeirinho", id: 3397153 },
+      { name: "Junco do Seridó", id: 3397138 },
+      { name: "Juripiranga", id: 3397127 },
+      { name: "Juru", id: 3397124 },
+      { name: "Lagoa", id: 3396960 },
+      { name: "Lagoa de Dentro", id: 3396946 },
+      { name: "Lagoa Seca", id: 3396929 },
+      { name: "Lastro", id: 3396636 },
+      { name: "Livramento", id: 3396368 },
+      { name: "Logradouro", id: 3396332 },
+      { name: "Lucena", id: 3396283 },
+      { name: "Mãe d'Água", id: 3395981 },
+      { name: "Malta", id: 3395875 },
+      { name: "Mamanguape", id: 3395713 },
+      { name: "Manaíra", id: 3395696 },
+      { name: "Marcação", id: 3395525 },
+      { name: "Mari", id: 3395478 },
+      { name: "Marizópolis", id: 3395469 },
+      { name: "Massaranduba", id: 3395338 },
+      { name: "Mataraca", id: 3395316 },
+      { name: "Matinhas", id: 3395300 },
+      { name: "Mato Grosso", id: 3395297 },
+      { name: "Maturéia", id: 3395283 },
+      { name: "Mogeiro", id: 3394617 },
+      { name: "Montadas", id: 3394562 },
+      { name: "Monte Horebe", id: 3394549 },
+      { name: "Monteiro", id: 3394548 },
+      { name: "Mulungu", id: 3394405 },
+      { name: "Natuba", id: 3394024 },
+      { name: "Nazarezinho", id: 3394013 },
+      { name: "Nova Floresta", id: 3393832 },
+      { name: "Nova Olinda", id: 3393809 },
+      { name: "Nova Palmeira", id: 3393806 },
+      { name: "Olho d'Água", id: 3393624 },
+      { name: "Olivedos", id: 3393617 },
+      { name: "Ouro Velho", id: 3393437 },
+      { name: "Parari", id: 3393028 },
+      { name: "Passagem", id: 3392958 },
+      { name: "Patos", id: 3392929 },
+      { name: "Paulista", id: 3392854 },
+      { name: "Pedra Branca", id: 3392649 },
+      { name: "Pedra Lavrada", id: 3392643 },
+      { name: "Pedras de Fogo", id: 3392638 },
+      { name: "Pedro Régis", id: 3392630 },
+      { name: "Piancó", id: 3392424 },
+      { name: "Picuí", id: 3392401 },
+      { name: "Pilar", id: 3392379 },
+      { name: "Pilões", id: 3392375 },
+      { name: "Pilõezinhos", id: 3392374 },
+      { name: "Pirpirituba", id: 3392296 },
+      { name: "Pitimbu", id: 3392268 },
+      { name: "Pocinhos", id: 3392242 },
+      { name: "Poço Dantas", id: 3392239 },
+      { name: "Poço de José de Moura", id: 3392238 },
+      { name: "Pombal", id: 3392191 },
+      { name: "Prata", id: 3392056 },
+      { name: "Princesa Isabel", id: 3392049 },
+      { name: "Puxinanã", id: 3391861 },
+      { name: "Queimadas", id: 3391791 },
+      { name: "Quixabá", id: 3391758 },
+      { name: "Remígio", id: 3390770 },
+      { name: "Riachão", id: 3390678 },
+      { name: "Riachão do Bacamarte", id: 3390677 },
+      { name: "Riachão do Poço", id: 3390676 },
+      { name: "Riacho de Santo Antônio", id: 3390662 },
+      { name: "Riacho dos Cavalos", id: 3390661 },
+      { name: "Rio Tinto", id: 3390160 },
+      { name: "Salgadinho", id: 3389779 },
+      { name: "Salgado de São Félix", id: 3389778 },
+      { name: "Santa Cecília", id: 3389557 },
+      { name: "Santa Cruz", id: 3389542 },
+      { name: "Santa Helena", id: 3389506 },
+      { name: "Santa Inês", id: 3389493 },
+      { name: "Santa Luzia", id: 3389461 },
+      { name: "Santa Rita", id: 3389321 },
+      { name: "Santa Teresinha", id: 3389312 },
+      { name: "Santana de Mangueira", id: 3389356 },
+      { name: "Santana dos Garrotes", id: 3389355 },
+      { name: "Santo André", id: 3389292 },
+      { name: "São Bentinho", id: 3388992 },
+      { name: "São Bento", id: 3388991 },
+      { name: "São Domingos", id: 3388932 },
+      { name: "São Domingos do Cariri", id: 3388931 },
+      { name: "São Francisco", id: 3388874 },
+      { name: "São João do Cariri", id: 3388762 },
+      { name: "São João do Rio do Peixe", id: 3388760 },
+      { name: "São João do Tigre", id: 3388759 },
+      { name: "São José da Lagoa Tapada", id: 3388687 },
+      { name: "São José de Caiana", id: 3388685 },
+      { name: "São José de Espinharas", id: 3388684 },
+      { name: "São José de Piranhas", id: 3388683 },
+      { name: "São José de Princesa", id: 3388682 },
+      { name: "São José do Bonfim", id: 3388680 },
+      { name: "São José do Brejo do Cruz", id: 3388679 },
+      { name: "São José do Sabugi", id: 3388678 },
+      { name: "São José dos Cordeiros", id: 3388677 },
+      { name: "São José dos Ramos", id: 3388676 },
+      { name: "São Mamede", id: 3388665 },
+      { name: "São Miguel de Taipu", id: 3388645 },
+      { name: "São Sebastião de Lagoa de Roça", id: 3388618 },
+      { name: "São Sebastião do Umbuzeiro", id: 3388617 },
+      { name: "São Vicente do Seridó (Seridó)", id: 3387858 },
+      { name: "Sapé", id: 3388582 },
+      { name: "Serra Branca", id: 3387841 },
+      { name: "Serra da Raiz", id: 3387838 },
+      { name: "Serra Grande", id: 3387833 },
+      { name: "Serra Redonda", id: 3387828 },
+      { name: "Serraria", id: 3387825 },
+      { name: "Sertãozinho", id: 3387816 },
+      { name: "Sobrado", id: 3387647 },
+      { name: "Solânea", id: 3387607 },
+      { name: "Soledade", id: 3387606 },
+      { name: "Sossêgo", id: 3387598 },
+      { name: "Sousa", id: 3387246 },
+      { name: "Sumé", id: 3387147 },
+      { name: "Taperoá", id: 3386687 },
+      { name: "Tavares", id: 3386662 },
+      { name: "Teixeira", id: 3386637 },
+      { name: "Tenório", id: 3386623 },
+      { name: "Triunfo", id: 3386016 },
+      { name: "Uiraúna", id: 3385860 },
+      { name: "Umbuzeiro", id: 3385852 },
+      { name: "Várzea", id: 3385356 },
+      { name: "Vieirópolis", id: 3385076 },
+      { name: "Vista Serrana", id: 3385029 },
+      { name: "Zabelê", id: 3384964 }
+    ];
+    // ===============================================================
+
+    let weatherData = []; // array de objetos normalizados
+    let lastSort = 'name'; // estado de ordenação atual
+
+    function formatDate(date) {
+      const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return new Intl.DateTimeFormat('pt-BR', options).format(date);
+    }
+
+    function normalizeFromOWM(json, cityName) {
+      if (!json || !json.main) return null;
+      return {
+        cityName: cityName || json.name || '',
+        temp: Math.round(json.main.temp),
+        condition: (json.weather && json.weather[0] && json.weather[0].description) ? json.weather[0].description : '—',
+        icon: (json.weather && json.weather[0] && json.weather[0].icon) ? json.weather[0].icon : 'default',
+        windKmh: json.wind && typeof json.wind.speed === 'number' ? (json.wind.speed * 3.6) : null,
+        humidity: json.main.humidity ?? null,
+        pressure: json.main.pressure ?? null,
+        fetchedAt: new Date()
+      };
+    }
+
+    function normalizeFromBackendItem(item) {
+      // Esperado do backend: { cidade, temperatura, condicao, vento, umidade, pressao, icon }
+      return {
+        cityName: item.cidade,
+        temp: Math.round(Number(item.temperatura)),
+        condition: item.condicao || '—',
+        icon: item.icon || 'default',
+        windKmh: item.vento ? Number(item.vento) * 3.6 : null,
+        humidity: item.umidade ?? null,
+        pressure: item.pressao ?? null,
+        fetchedAt: new Date()
+      };
+    }
+
+    function render(data) {
+      weatherContainer.innerHTML = '';
+      if (!data || data.length === 0) {
+        weatherContainer.innerHTML = '<div class="empty">Nenhuma cidade encontrada.</div>';
+        countBadge.textContent = '0 cidades';
+        return;
+      }
+      countBadge.textContent = `${data.length} cidades`;
+
+      data.forEach(d => {
+        const iconFile = weatherIcons[d.icon] || weatherIcons['default'];
+        const iconUrl = `${iconsBaseUrl}${iconFile}`;
+        const wind = (typeof d.windKmh === 'number') ? `${d.windKmh.toFixed(1)} km/h` : '—';
+        const hum = (typeof d.humidity === 'number') ? `${d.humidity}%` : '—';
+        const pres = (typeof d.pressure === 'number') ? `${d.pressure} hPa` : '—';
+
+        weatherContainer.insertAdjacentHTML('beforeend', `
+          <div class="city-card">
+            <div class="card-header">
+              <img src="${iconUrl}" alt="Clima" class="weather-icon" loading="lazy">
+              <div class="city-info">
+                <h2 class="city-name">${d.cityName}</h2>
+                <p class="temperature">${Number.isFinite(d.temp) ? d.temp + '°C' : '--°C'}</p>
+                <p class="weather-condition">${d.condition}</p>
+                <p class="meta">Vento: ${wind} &nbsp;&bull;&nbsp; Umidade: ${hum} &nbsp;&bull;&nbsp; Pressão: ${pres}</p>
+              </div>
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    function sortByTempDesc(arr) {
+      return [...arr].sort((a, b) => {
+        const ta = Number.isFinite(a.temp) ? a.temp : -Infinity;
+        const tb = Number.isFinite(b.temp) ? b.temp : -Infinity;
+        return tb - ta;
+      });
+    }
+
+    function sortByName(arr) {
+      return [...arr].sort((a, b) => a.cityName.localeCompare(b.cityName, 'pt-BR'));
+    }
+
+    // Busca do backend (/clima). Espera { clima: [...] }
+    async function fetchFromBackend() {
+      const res = await fetch('/clima', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Backend /clima indisponível');
+      const json = await res.json();
+      if (!json || !Array.isArray(json.clima)) throw new Error('Formato inválido do backend');
+      return json.clima.map(normalizeFromBackendItem);
+    }
+
+    // Busca direta na OpenWeather (em lotes)
+    async function fetchFromOWMInBatches() {
+      if (!OPENWEATHER_API_KEY) throw new Error('Sem chave OPENWEATHER_API_KEY');
+      const acc = [];
+      const chunks = [];
+      for (let i = 0; i < cities.length; i += BATCH_SIZE) {
+        chunks.push(cities.slice(i, i + BATCH_SIZE));
+      }
+
+      for (let idx = 0; idx < chunks.length; idx++) {
+        const batch = chunks[idx];
+        const results = await Promise.all(batch.map(async (c) => {
+          try {
+            const url = `https://api.openweathermap.org/data/2.5/weather?id=${c.id}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=pt_br`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const j = await r.json();
+            const norm = normalizeFromOWM(j, c.name);
+            return norm || { cityName: c.name, temp: NaN, condition: 'Indisponível', icon: 'default' };
+          } catch (e) {
+            console.warn('Falha cidade', c.name, e);
+            return { cityName: c.name, temp: NaN, condition: 'Indisponível', icon: 'default' };
+          }
+        }));
+        acc.push(...results);
+        render(applyFiltersAndSort(acc)); // renderiza incrementalmente
+        if (idx < chunks.length - 1) {
+          await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+        }
+      }
+      return acc;
+    }
+
+    function applyFiltersAndSort(arr) {
+      const term = (searchInput.value || '').toLowerCase().trim();
+      let out = arr;
+      if (term) {
+        out = out.filter(d => d.cityName.toLowerCase().includes(term));
+      }
+      if (lastSort === 'temp') out = sortByTempDesc(out);
+      else out = sortByName(out);
+      return out;
+    }
+
+    async function loadAll() {
+      weatherContainer.innerHTML = `
+        <div class="loading pulse"><i class="fas fa-spinner fa-spin"></i> Carregando dados meteorológicos...</div>
+      `;
+      try {
+        // Tenta backend primeiro
+        const backendData = await fetchFromBackend();
+        weatherData = backendData;
+      } catch (e) {
+        console.info('Usando fallback direto na OpenWeather:', e.message);
+        weatherData = await fetchFromOWMInBatches();
+      }
+      render(applyFiltersAndSort(weatherData));
+      lastUpdateEl.textContent = `Última atualização: ${formatDate(new Date())}`;
+    }
+
+    // Listeners
+    searchInput.addEventListener('input', () => {
+      render(applyFiltersAndSort(weatherData));
+    });
+    sortTempBtn.addEventListener('click', () => {
+      lastSort = 'temp';
+      render(applyFiltersAndSort(weatherData));
+    });
+    sortNameBtn.addEventListener('click', () => {
+      lastSort = 'name';
+      render(applyFiltersAndSort(weatherData));
+    });
+    refreshBtn.addEventListener('click', loadAll);
+
+    // Inicialização
+    loadAll();
+    setInterval(loadAll, UPDATE_INTERVAL_MS);
+  </script>
+</body>
+</html>

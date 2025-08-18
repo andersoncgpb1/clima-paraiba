@@ -21,23 +21,44 @@ const cidades = [
   
 ];
 
-// Função para mapear condição do tempo para ícone do GitHub
-function getIcon(condition) {
-  const iconesBase = "https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/Clima/";
-  condition = condition.toLowerCase();
+function traduzirCondicao(condicao) {
+  const mapa = {
+    "Sunny": "Ensolarado",
+    "Clear": "Ensolarado",
+    "Partly cloudy": "Nublado com Sol",
+    "Cloudy": "Nublado",
+    "Overcast": "Nublado",
+    "Mist": "Nublado",
+    "Patchy rain possible": "Chuva",
+    "Patchy snow possible": "Neve",
+    "Patchy sleet possible": "Neve",
+    "Patchy freezing drizzle possible": "Chuva",
+    "Thundery outbreaks possible": "Tempestade",
+    "Blowing snow": "Neve",
+    "Blizzard": "Neve",
+    "Fog": "Nublado",
+    "Freezing fog": "Nublado",
+    "Patchy light drizzle": "Chuva",
+    "Light drizzle": "Chuva",
+    "Heavy drizzle": "Chuva",
+    "Patchy light rain": "Chuva",
+    "Light rain": "Chuva",
+    "Moderate rain at times": "Chuva",
+    "Moderate rain": "Chuva",
+    "Heavy rain at times": "Chuva",
+    "Heavy rain": "Chuva",
+    "Light snow": "Neve",
+    "Moderate snow": "Neve",
+    "Heavy snow": "Neve",
+    "Thunderstorm": "Tempestade",
+    "Patchy light rain with thunder": "Tempestade com Sol",
+    "Moderate or heavy rain with thunder": "Tempestade",
+    // Adicione outras conforme necessidade
+  };
 
-  if (condition.includes("chuva") && condition.includes("sol")) return iconesBase + "Chuva com Sol.png";
-  if (condition.includes("chuva")) return iconesBase + "Chuva.png";
-  if (condition.includes("tempestade") && condition.includes("sol")) return iconesBase + "Tempestade com sol.png";
-  if (condition.includes("tempestade")) return iconesBase + "Tempestade.png";
-  if (condition.includes("ensolarado")) return iconesBase + "Ensolarado.png";
-  if (condition.includes("nublado") && condition.includes("sol")) return iconesBase + "Nublado com Sol.png";
-  if (condition.includes("nublado") && condition.includes("noite")) return iconesBase + "Nublado Noite.png";
-  if (condition.includes("nublado")) return iconesBase + "Nublado.png";
-
-  // padrão
-  return iconesBase + "Ensolarado.png";
+  return mapa[condicao] || condicao; // se não encontrar, retorna original
 }
+
 
 // Endpoint para retornar dados em JSON (pode ser usado pelo vMix)
 app.get("/clima", async (req, res) => {
@@ -48,12 +69,15 @@ app.get("/clima", async (req, res) => {
       const response = await fetch(`http://api.weatherapi.com/v1/current.json?key=5d0ba8b53e344994ad424037251608&q=${encodeURIComponent(cidade)}&aqi=no`);
       const data = await response.json();
 
-      resultados.push({
-        cidade: data.location.name,
-        temperatura: data.current.temp_c,
-        condicao: data.current.condition.text,
-        icone: getIcon(data.current.condition.text)
-      });
+ const condicaoPt = traduzirCondicao(data.current.condition.text);
+
+resultados.push({
+  cidade: data.location.name,
+  temperatura: Math.floor(data.current.temp_c), // apenas inteiro
+  condicao: condicaoPt,
+  icone: getIcon(condicaoPt)
+});
+
     } catch (err) {
       resultados.push({
         cidade,

@@ -1,14 +1,14 @@
 {
-  "name": "clima-paraiba",
+  "name": "clima-pb",
   "version": "1.0.0",
-  "description": "API que consulta o clima de cidades da Paraíba usando WeatherAPI",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
-  "cheerio": "^1.0.0-rc.12",
-  "express": "^4.18.2",
-  "node-fetch": "^3.4.0"
+    "cheerio": "^1.0.0-rc.12",
+    "express": "^4.18.2",
+    "node-fetch": "^3.4.0"
+  }
 }
-

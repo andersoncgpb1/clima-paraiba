@@ -6,12 +6,12 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = 'f1d6e106487c211e360c92271b174c2c';
+const API_KEY = process.env.API_KEY || 'f1d6e106487c211e360c92271b174c2c';
 
 app.use(cors());
 app.use(express.json());
 
-// Lista de cidades da Paraíba
+// Lista de cidades da Paraíba para o vMix
 const cidades = [
     { id: 3397277, nome: "João Pessoa" },
     { id: 3403642, nome: "Campina Grande" },
@@ -27,12 +27,16 @@ const cidades = [
     { id: 3406498, nome: "Bananeiras" }
 ];
 
-// Função para buscar dados do clima
+// Função para buscar dados do OpenWeatherMap
 async function fetchClima(cidadeId, cidadeNome) {
     try {
         const response = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?id=${cidadeId}&appid=${API_KEY}&units=metric&lang=pt`
         );
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
         
         const data = await response.json();
         
@@ -46,60 +50,104 @@ async function fetchClima(cidadeId, cidadeNome) {
             atualizado: new Date().toLocaleString('pt-BR')
         };
     } catch (error) {
-        console.error(`Erro em ${cidadeNome}:`, error);
+        console.error(`Erro em ${cidadeNome}:`, error.message);
         return {
             cidade: cidadeNome,
-            temperatura: "N/A",
+            temperatura: 0,
             condicao: "Dados indisponíveis",
-            umidade: "N/A",
-            vento: "N/A",
+            umidade: 0,
+            vento: 0,
             icone: "",
             atualizado: new Date().toLocaleString('pt-BR')
         };
     }
 }
 
-// Rota principal - retorna JSON para o vMix
+// Rota principal para o vMix
 app.get('/clima', async (req, res) => {
     try {
+        console.log('Solicitando dados do clima...');
+        
         const dadosClima = await Promise.all(
             cidades.map(cidade => fetchClima(cidade.id, cidade.nome))
         );
         
-        // Salva em arquivo JSON
+        // Formata para o vMix
         const jsonData = JSON.stringify(dadosClima, null, 2);
-        fs.writeFileSync('clima.json', jsonData);
         
-        res.json(dadosClima);
+        // Salva em arquivo
+        fs.writeFileSync(path.join(__dirname, 'public', 'clima.json'), jsonData);
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.send(jsonData);
+        
     } catch (error) {
         console.error('Erro geral:', error);
-        res.status(500).json({ error: 'Erro ao buscar dados do clima' });
+        res.status(500).json({ 
+            error: 'Erro ao buscar dados do clima',
+            message: error.message 
+        });
     }
 });
 
-// Servir arquivo estático JSON
+// Servir arquivo JSON estático
+app.use(express.static('public'));
+
 app.get('/clima.json', (req, res) => {
-    res.sendFile(path.join(__dirname, 'clima.json'));
+    res.sendFile(path.join(__dirname, 'public', 'clima.json'));
 });
 
-// Health check
+// Health check para Render
 app.get('/health', (req, res) => {
-    res.json({ status: 'online', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'online', 
+        service: 'Clima Paraíba API',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            vMix: '/clima',
+            static: '/clima.json',
+            health: '/health'
+        }
+    });
 });
 
+// Rota raiz
+app.get('/', (req, res) => {
+    res.json({
+        message: 'API Clima Paraíba para vMix',
+        endpoints: {
+            vMix_data: 'https://clima-paraiba.onrender.com/clima',
+            static_json: 'https://clima-paraiba.onrender.com/clima.json',
+            health_check: 'https://clima-paraiba.onrender.com/health'
+        },
+        usage: 'Use no vMix: Data Source → JSON → URL: https://clima-paraiba.onrender.com/clima.json'
+    });
+});
+
+// Inicialização do servidor
 app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-    console.log(`URL para vMix: http://localhost:${PORT}/clima`);
-    console.log(`JSON estático: http://localhost:${PORT}/clima.json`);
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+    console.log(`📍 Local: http://localhost:${PORT}`);
+    console.log(`🌐 Render: https://clima-paraiba.onrender.com`);
+    console.log(`📊 URL vMix: https://clima-paraiba.onrender.com/clima.json`);
+    
+    // Criar diretório public se não existir
+    if (!fs.existsSync('public')) {
+        fs.mkdirSync('public');
+    }
 });
 
-// Atualiza os dados a cada 10 minutos
+// Atualização automática a cada 15 minutos
 setInterval(async () => {
-    console.log('Atualizando dados do clima...');
-    const dadosClima = await Promise.all(
-        cidades.map(cidade => fetchClima(cidade.id, cidade.nome))
-    );
-    const jsonData = JSON.stringify(dadosClima, null, 2);
-    fs.writeFileSync('clima.json', jsonData);
-    console.log('Dados atualizados:', new Date().toLocaleString('pt-BR'));
-}, 10 * 60 * 1000);
+    console.log('🔄 Atualizando dados do clima...');
+    try {
+        const dadosClima = await Promise.all(
+            cidades.map(cidade => fetchClima(cidade.id, cidade.nome))
+        );
+        const jsonData = JSON.stringify(dadosClima, null, 2);
+        fs.writeFileSync(path.join(__dirname, 'public', 'clima.json'), jsonData);
+        console.log('✅ Dados atualizados:', new Date().toLocaleString('pt-BR'));
+    } catch (error) {
+        console.error('❌ Erro na atualização:', error);
+    }
+}, 15 * 60 * 1000); // 15 minutos

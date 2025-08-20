@@ -8,6 +8,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || 'f1d6e106487c211e360c92271b174c2c';
 
+// URL base dos seus ícones no GitHub
+const GITHUB_ICONS_BASE = 'https://raw.githubusercontent.com/andersoncgpb1/clima-paraiba/main/icones/';
+
 app.use(cors());
 app.use(express.json());
 
@@ -27,53 +30,64 @@ const cidades = [
     { id: 3406498, nome: "Bananeiras" }
 ];
 
-// Mapeamento de ícones do OpenWeatherMap para emojis do Emojiterra
-const emojiMap = {
+// Mapeamento de ícones do OpenWeatherMap para seus arquivos do GitHub
+const iconMap = {
     // Céu limpo
-    '01d': '☀️', // Sol
-    '01n': '🌙', // Lua
+    '01d': 'sol.png', // Sol
+    '01n': 'lua-cheia.png', // Lua cheia
     
     // Poucas nuvens
-    '02d': '⛅', // Sol com nuvens
-    '02n': '☁️',  // Nuvem
+    '02d': 'sol-com-nuvens.png', // Sol com nuvens
+    '02n': 'lua-com-nuvens.png', // Lua com nuvens
     
     // Nublado
-    '03d': '☁️', // Nuvem
-    '03n': '☁️', // Nuvem
+    '03d': 'nublado.png', // Nublado
+    '03n': 'nublado.png', // Nublado
     
     // Muito nublado
-    '04d': '☁️', // Nuvem
-    '04n': '☁️', // Nuvem
+    '04d': 'nublado.png', // Nublado
+    '04n': 'nublado.png', // Nublado
     
     // Chuva
-    '09d': '🌧️',  // Chuva
-    '09n': '🌧️',  // Chuva
+    '09d': 'chuva.png', // Chuva
+    '09n': 'chuva.png', // Chuva
     
     // Chuva com sol
-    '10d': '🌦️',  // Chuva com sol
-    '10n': '🌧️',  // Chuva
+    '10d': 'sol-com-chuva.png', // Sol com chuva
+    '10n': 'chuva.png', // Chuva (noite)
     
     // Trovoada
-    '11d': '⛈️',  // Trovoada
-    '11n': '⛈️',  // Trovoada
+    '11d': 'chuva-com-trovao.png', // Chuva com trovão
+    '11n': 'chuva-com-trovao.png', // Chuva com trovão
     
     // Neve
-    '13d': '❄️',  // Neve
-    '13n': '❄️',  // Neve
+    '13d': 'nuvem-com-neve.png', // Neve
+    '13n': 'nuvem-com-neve.png', // Neve
     
     // Névoa
-    '50d': '🌫️',  // Névoa
-    '50n': '🌫️',  // Névoa
+    '50d': 'neblina.png', // Neblina
+    '50n': 'neblina.png', // Neblina
     
     // Default
-    'default': '🌡️' // Termômetro
+    'default': 'sol-com-nuvens.png' // Default
+};
+
+// Mapeamento adicional para fases da lua baseado na hora
+const moonPhaseIcons = {
+    'new-moon': 'lua-nova.png',
+    'waxing-crescent': 'lua-crescente.png',
+    'first-quarter': 'quarto-crescente.png',
+    'waxing-gibbous': 'lua-crescente-convexa.png',
+    'full-moon': 'lua-cheia.png',
+    'waning-gibbous': 'lua-minguante-convexa.png',
+    'last-quarter': 'quarto-minguante.png',
+    'waning-crescent': 'lua-minguante-concava.png'
 };
 
 // Função para formatar data no GMT-3 (Horário de Brasília)
 function getDataBrasilia() {
     const now = new Date();
-    // Ajusta para GMT-3 (UTC-3)
-    const offset = -3 * 60; // GMT-3 em minutos
+    const offset = -3 * 60;
     const brasiliaTime = new Date(now.getTime() + offset * 60 * 1000);
     
     return brasiliaTime.toLocaleString('pt-BR', {
@@ -88,9 +102,26 @@ function getDataBrasilia() {
     });
 }
 
-// Função para obter emoji baseado no código do OpenWeatherMap
-function getEmoji(iconCode) {
-    return emojiMap[iconCode] || emojiMap['default'];
+// Função para determinar fase da lua (simplificada)
+function getMoonPhase() {
+    const now = new Date();
+    const day = now.getDate();
+    // Simulação simples baseada no dia do mês
+    const phases = Object.keys(moonPhaseIcons);
+    return phases[day % phases.length];
+}
+
+// Função para obter ícone do GitHub baseado no código do OpenWeatherMap
+function getGitHubIcon(iconCode, isNight = false) {
+    let iconFile = iconMap[iconCode] || iconMap['default'];
+    
+    // Se for noite e for um ícone diurno, tenta encontrar versão noturna
+    if (isNight && iconCode.includes('d')) {
+        const nightCode = iconCode.replace('d', 'n');
+        iconFile = iconMap[nightCode] || iconFile;
+    }
+    
+    return GITHUB_ICONS_BASE + iconFile;
 }
 
 // Função para buscar dados do OpenWeatherMap
@@ -105,21 +136,25 @@ async function fetchClima(cidadeId, cidadeNome) {
         }
         
         const data = await response.json();
-        
-        // Obtém o código do ícone e o emoji correspondente
         const iconeCode = data.weather[0].icon;
-        const emoji = getEmoji(iconeCode);
-        const iconeUrl = `https://openweathermap.org/img/wn/${iconeCode}@2x.png`;
+        const isNight = iconeCode.includes('n');
+        
+        // Ícone do GitHub
+        const githubIcon = getGitHubIcon(iconeCode, isNight);
+        
+        // Ícone original do OpenWeatherMap (para backup)
+        const owmIcon = `https://openweathermap.org/img/wn/${iconeCode}@2x.png`;
         
         return {
             cidade: cidadeNome,
             temperatura: Math.round(data.main.temp),
             condicao: data.weather[0].description,
             umidade: data.main.humidity,
-            vento: Math.round(data.wind.speed * 3.6), // Convertendo m/s para km/h
-            icone: iconeUrl,
-            emoji: emoji, // Novo campo com emoji
-            icone_code: iconeCode, // Código do ícone para debug
+            vento: Math.round(data.wind.speed * 3.6),
+            icone: githubIcon, // Seu ícone do GitHub
+            icone_owm: owmIcon, // Ícone original (backup)
+            icone_code: iconeCode,
+            is_night: isNight,
             atualizado: getDataBrasilia()
         };
     } catch (error) {
@@ -130,9 +165,10 @@ async function fetchClima(cidadeId, cidadeNome) {
             condicao: "Dados indisponíveis",
             umidade: 0,
             vento: 0,
-            icone: "https://openweathermap.org/img/wn/01d@2x.png",
-            emoji: "❓", // Emoji de interrogação para erro
+            icone: GITHUB_ICONS_BASE + 'sol-com-nuvens.png', // Ícone default do seu GitHub
+            icone_owm: "https://openweathermap.org/img/wn/01d@2x.png",
             icone_code: "error",
+            is_night: false,
             atualizado: getDataBrasilia()
         };
     }
@@ -147,10 +183,7 @@ app.get('/clima', async (req, res) => {
             cidades.map(cidade => fetchClima(cidade.id, cidade.nome))
         );
         
-        // Formata para o vMix
         const jsonData = JSON.stringify(dadosClima, null, 2);
-        
-        // Salva em arquivo
         fs.writeFileSync(path.join(__dirname, 'public', 'clima.json'), jsonData);
         
         res.setHeader('Content-Type', 'application/json');
@@ -166,13 +199,14 @@ app.get('/clima', async (req, res) => {
     }
 });
 
-// Rota para ver todos os emojis disponíveis
-app.get('/emojis', (req, res) => {
+// Rota para ver mapeamento de ícones
+app.get('/icones', (req, res) => {
     res.json({
-        emoji_map: emojiMap,
-        total_emojis: Object.keys(emojiMap).length,
-        available_codes: Object.keys(emojiMap),
-        usage: "Mapeamento de códigos OpenWeatherMap para emojis"
+        github_base: GITHUB_ICONS_BASE,
+        icon_mapping: iconMap,
+        moon_phases: moonPhaseIcons,
+        total_icons: Object.keys(iconMap).length,
+        available_files: Object.values(iconMap)
     });
 });
 
@@ -187,14 +221,14 @@ app.get('/clima.json', (req, res) => {
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'online', 
-        service: 'Clima Paraíba API + Emojis',
+        service: 'Clima Paraíba API - Ícones Personalizados',
         timestamp: new Date().toISOString(),
         brasilia_time: getDataBrasilia(),
-        emojis_available: Object.keys(emojiMap).length,
+        github_icons: GITHUB_ICONS_BASE,
         endpoints: {
             vMix: '/clima',
             static: '/clima.json',
-            emojis: '/emojis',
+            icones: '/icones',
             health: '/health'
         }
     });
@@ -203,22 +237,17 @@ app.get('/health', (req, res) => {
 // Rota raiz
 app.get('/', (req, res) => {
     res.json({
-        message: 'API Clima Paraíba para vMix - Com Emojis 🌤️',
+        message: 'API Clima Paraíba - Com seus ícones personalizados 🎨',
         timezone: 'Horário de Brasília (GMT-3)',
         current_time: getDataBrasilia(),
-        features: {
-            openweathermap: 'Dados meteorológicos em tempo real',
-            emojiterra: 'Emojis visuais para condições climáticas',
-            gmt3: 'Horário de Brasília automático',
-            vmix_ready: 'JSON formatado para vMix'
-        },
+        github_icons: GITHUB_ICONS_BASE,
+        features: 'Ícones personalizados do seu GitHub',
         endpoints: {
             vMix_data: 'https://clima-paraiba.onrender.com/clima',
             static_json: 'https://clima-paraiba.onrender.com/clima.json',
-            emojis_list: 'https://clima-paraiba.onrender.com/emojis',
+            icon_mapping: 'https://clima-paraiba.onrender.com/icones',
             health_check: 'https://clima-paraiba.onrender.com/health'
-        },
-        usage: 'Use no vMix: Data Source → JSON → URL: https://clima-paraiba.onrender.com/clima.json'
+        }
     });
 });
 
@@ -227,12 +256,11 @@ app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
     console.log(`📍 Timezone: GMT-3 (Horário de Brasília)`);
     console.log(`🕒 Hora atual: ${getDataBrasilia()}`);
-    console.log(`🎨 Emojis disponíveis: ${Object.keys(emojiMap).length}`);
+    console.log(`🎨 Ícones GitHub: ${GITHUB_ICONS_BASE}`);
     console.log(`🌐 Render: https://clima-paraiba.onrender.com`);
     console.log(`📊 URL vMix: https://clima-paraiba.onrender.com/clima.json`);
-    console.log(`😊 Emojis: https://clima-paraiba.onrender.com/emojis`);
+    console.log(`🖼️ Mapeamento: https://clima-paraiba.onrender.com/icones`);
     
-    // Criar diretório public se não existir
     if (!fs.existsSync('public')) {
         fs.mkdirSync('public');
     }
@@ -249,12 +277,7 @@ setInterval(async () => {
         fs.writeFileSync(path.join(__dirname, 'public', 'clima.json'), jsonData);
         console.log('✅ Dados atualizados:', getDataBrasilia());
         
-        // Log dos emojis usados
-        dadosClima.forEach(cidade => {
-            console.log(`   ${cidade.emoji} ${cidade.cidade}: ${cidade.temperatura}°C`);
-        });
-        
     } catch (error) {
         console.error('❌ Erro na atualização:', error);
     }
-}, 15 * 60 * 1000); // 15 minutos
+}, 15 * 60 * 1000);

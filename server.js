@@ -14,41 +14,41 @@ const GITHUB_ICONS_BASE = 'https://raw.githubusercontent.com/andersoncgpb1/clima
 app.use(cors());
 app.use(express.json());
 
-// Cidades da Paraíba com população acima de 10 mil (IDs do OpenWeatherMap)
+// Cidades da Paraíba (população >10k), com ID do OpenWeatherMap
 const cidades = [
   { nome: "João Pessoa", id: 3397277 },
   { nome: "Campina Grande", id: 3403642 },
-  { nome: "Santa Rita", id: 3389774 },
-  { nome: "Bayeux", id: 3405892 },
-  { nome: "Patos", id: 3392929 },
-  { nome: "Guarabira", id: 3398592 },
-  { nome: "Cabedelo", id: 3404575 },
-  { nome: "Sousa", id: 3387249 },
-  { nome: "Esperança", id: 3400719 },
-  { nome: "Pombal", id: 3391528 },
-  { nome: "Cajazeiras", id: 3408152 },
-  { nome: "Bananeiras", id: 3406498 },
-  { nome: "Itabaiana", id: 3401230 },
-  { nome: "Conde", id: 3400560 },
-  { nome: "Alhandra", id: 3399200 },
-  { nome: "Areia", id: 3399876 },
-  { nome: "Sapé", id: 3402999 },
-  { nome: "Mamanguape", id: 3402345 },
-  { nome: "Cuité", id: 3399555 },
-  { nome: "Picuí", id: 3399439 },
-  { nome: "Catolé do Rocha", id: 3402679 },
-  { nome: "São Bento", id: 3407221 },
-  { nome: "Monteiro", id: 3405131 },
-  { nome: "Teixeira", id: 3407265 },
-  { nome: "Sumé", id: 3406276 }
-  // ... adicione outras cidades >10k habitantes conforme necessário
+  { nome: "Santa Rita", id: 3389321 },
+  { nome: "Bayeux", id: 3405940 },
+  { nome: "Patos", id: 3392887 },
+  { nome: "Guarabira", id: 3398570 },
+  { nome: "Cabedelo", id: 3404558 },
+  { nome: "Sousa", id: 3387202 },
+  { nome: "Esperança", id: 3400752 },
+  { nome: "Pombal", id: 3391571 },
+  { nome: "Cajazeiras", id: 3404020 },
+  { nome: "Bananeiras", id: 3406503 },
+  { nome: "Itabaiana", id: 3398003 },
+  { nome: "Conde", id: 3385077 },
+  { nome: "Alhandra", id: 3407940 },
+  { nome: "Areia", id: 3407210 },
+  { nome: "Sapé", id: 3388046 },
+  { nome: "Mamanguape", id: 3395717 },
+  { nome: "Cuité", id: 3401419 },
+  { nome: "Picuí", id: 3392145 },
+  { nome: "Catolé do Rocha", id: 3402465 },
+  { nome: "São Bento", id: 3388991 },
+  { nome: "Monteiro", id: 3394549 },
+  { nome: "Teixeira", id: 3386533 },
+  { nome: "Sumé", id: 3387130 },
+  { nome: "Serra Branca", id: 3387880 }
 ];
 
 // Mapeamento de ícones do GitHub
 const iconMap = {
   '01d': 'sol.png',
   '01n': 'lua-cheia.png',
-  '02d': 'sol-com-nuvens.png',
+  '02d': 'ceu-pouco-nublado.png', // Novo ícone
   '02n': 'lua-com-nuvens.png',
   '03d': 'nublado.png',
   '03n': 'nublado.png',
@@ -128,10 +128,10 @@ async function fetchClima(cidade) {
 
     return {
       cidade: cidade.nome,
-      temperatura: temperatura,
-      condicao: condicao,
-      umidade: umidade,
-      vento: vento,
+      temperatura,
+      condicao,
+      umidade,
+      vento,
       icone: getGitHubIcon(iconeCode, isNight),
       lua: moonPhaseIcons[getMoonPhase()],
       atualizado: getDataBrasilia()

@@ -1,0 +1,33 @@
+// Adicione esta rota no server.js para gerar um JSON otimizado para vMix
+
+app.get('/vmix/weather', (req, res) => {
+  const filePath = path.join(__dirname, 'public', 'clima.json');
+  
+  if (fs.existsSync(filePath)) {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    
+    // Formatar para fácil leitura no vMix
+    const vmixData = {
+      timestamp: new Date().toISOString(),
+      total_cities: data.length,
+      cities: data.map(city => ({
+        name: city.cidade,
+        temp: city.temperatura,
+        condition: city.condicao,
+        humidity: city.umidade,
+        wind: city.vento,
+        uv: city.uv_index,
+        icon: city.icone
+      })),
+      summary: {
+        avg_temp: (data.reduce((sum, c) => sum + (c.temperatura || 0), 0) / data.length).toFixed(1),
+        max_temp: Math.max(...data.map(c => c.temperatura || 0)),
+        min_temp: Math.min(...data.map(c => c.temperatura || 0))
+      }
+    };
+    
+    res.json(vmixData);
+  } else {
+    res.status(404).json({ error: 'Dados não disponíveis' });
+  }
+});

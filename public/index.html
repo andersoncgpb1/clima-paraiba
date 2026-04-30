@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Clima Paraíba - Dashboard</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
+  <!-- Fallback favicon emoji caso não tenha os arquivos -->
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+
+    /* Container principal */
+    .dashboard {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      animation: slideDown 0.5s ease;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #ffd89b, #c7e9fb);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      display: inline-flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .header h1 img {
+      width: 48px;
+      height: 48px;
+      vertical-align: middle;
+    }
+
+    .subtitle {
+      color: #ccc;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
+    /* Controles */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 50px;
+      padding: 12px 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: all 0.3s ease;
+    }
+
+    .search-box:focus-within {
+      background: rgba(255,255,255,0.15);
+      border-color: #ffd89b;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      outline: none;
+      width: 250px;
+    }
+
+    .search-box input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* Grid de cards */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    /* Cards modernos */
+    .card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    .card:hover::before {
+      left: 100%;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      background: rgba(255,255,255,0.15);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    /* Cabeçalho do card */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .weather-icon {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .weather-icon {
+      transform: scale(1.05);
+    }
+
+    .city-name {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #ffd89b;
+    }
+
+    /* Temperatura */
+    .temp {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .condition {
+      opacity: 0.9;
+      margin-bottom: 15px;
+      text-transform: capitalize;
+    }
+
+    /* Detalhes */
+    .details {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    /* Status e loading */
+    .loading {
+      text-align: center;
+      padding: 50px;
+      font-size: 1.2rem;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    .error {
+      text-align: center;
+      padding: 50px;
+      color: #ff6b6b;
+    }
+
+    .error i {
+      font-size: 3rem;
+      margin-bottom: 15px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .stat-badge {
+      background: rgba(0,0,0,0.3);
+      padding: 8px 16px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Animações */
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 1.8rem;
+      }
+      
+      .header h1 img {
+        width: 36px;
+        height: 36px;
+      }
+      
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .search-box input {
+        width: 100%;
+      }
+      
+      .btn {
+        justify-content: center;
+      }
+    }
+
+    /* Scrollbar personalizada */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      padding: 12px 20px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      z-index: 1000;
+      animation: slideUp 0.3s ease;
+      border-left: 3px solid #4caf50;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <div class="dashboard">
+    <div class="header">
+      <h1>
+        <i class="fas fa-cloud-sun"></i>
+        Clima na Paraíba
+      </h1>
+      <div class="subtitle">
+        <i class="fas fa-temperature-high"></i> Temperatura atual nas principais cidades | 
+        <i class="fas fa-search"></i> Busca | 
+        <i class="fas fa-sort"></i> Ordenação | 
+        <i class="fas fa-sync-alt"></i> Atualização a cada 30 min
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Buscar cidade..." autocomplete="off">
+      </div>
+      <button class="btn" id="sortTempBtn">
+        <i class="fas fa-temperature-low"></i> Temperatura
+      </button>
+      <button class="btn" id="sortNameBtn">
+        <i class="fas fa-sort-alpha-down"></i> Nome
+      </button>
+      <button class="btn" id="refreshBtn">
+        <i class="fas fa-rotate-right"></i> Atualizar
+      </button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div id="weatherGrid" class="grid">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p><i class="fas fa-cloud-sun"></i> Carregando dados meteorológicos...</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span id="updateTime"><i class="fas fa-clock"></i> Aguardando atualização</span>
+      <span style="margin: 0 10px">|</span>
+      <span id="cityCount"><i class="fas fa-city"></i> 0 cidades</span>
+      <span style="margin: 0 10px">|</span>
+      <span><i class="fas fa-database"></i> Fonte: World Weather Online</span>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/clima';
+    const UPDATE_INTERVAL = 30 * 60 * 1000; // 30 minutos
+    
+    const weatherGrid = document.getElementById('weatherGrid');
+    const searchInput = document.getElementById('searchInput');
+    const sortTempBtn = document.getElementById('sortTempBtn');
+    const sortNameBtn = document.getElementById('sortNameBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const updateTimeSpan = document.getElementById('updateTime');
+    const cityCountSpan = document.getElementById('cityCount');
+    const statsDiv = document.getElementById('stats');
+    
+    let weatherData = [];
+    let currentSort = 'name';
+    let updateTimer = null;
+    
+    function formatDateTime() {
+      const now = new Date();
+      return now.toLocaleString('pt-BR', { 
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+    
+    function showToast(message, isError = false) {
+      const existingToast = document.querySelector('.toast');
+      if (existingToast) existingToast.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.style.borderLeftColor = isError ? '#f44336' : '#4caf50';
+      toast.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i> ${message}`;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
+    }
+    
+    function calculateStats(data) {
+      if (!data || data.length === 0) return null;
+      const validTemps = data.filter(c => c.temperatura !== null && !isNaN(c.temperatura));
+      if (validTemps.length === 0) return null;
+      const temps = validTemps.map(c => c.temperatura);
+      const avgTemp = (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1);
+      const maxTemp = Math.max(...temps);
+      const minTemp = Math.min(...temps);
+      const maxCity = validTemps.find(c => c.temperatura === maxTemp);
+      const minCity = validTemps.find(c => c.temperatura === minTemp);
+      return { avg: avgTemp, max: maxTemp, min: minTemp, maxCity: maxCity?.cidade, minCity: minCity?.cidade, total: data.length };
+    }
+    
+    function updateStats(data) {
+      const stats = calculateStats(data);
+      if (stats) {
+        statsDiv.innerHTML = `
+          <span class="stat-badge"><i class="fas fa-chart-line"></i> Média: ${stats.avg}°C</span>
+          <span class="stat-badge"><i class="fas fa-fire"></i> Mais quente: ${stats.max}°C (${stats.maxCity})</span>
+          <span class="stat-badge"><i class="fas fa-snowflake"></i> Mais fria: ${stats.min}°C (${stats.minCity})</span>
+          <span class="stat-badge"><i class="fas fa-city"></i> Total: ${stats.total} cidades</span>
+        `;
+      } else {
+        statsDiv.innerHTML = '';
+      }
+    }
+    
+    function sortData(data, sortBy) {
+      const sorted = [...data];
+      if (sortBy === 'temp') {
+        sorted.sort((a, b) => (b.temperatura || -999) - (a.temperatura || -999));
+      } else {
+        sorted.sort((a, b) => a.cidade.localeCompare(b.cidade, 'pt-BR'));
+      }
+      return sorted;
+    }
+    
+    function filterData(data, searchTerm) {
+      if (!searchTerm) return data;
+      const term = searchTerm.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return data.filter(city => city.cidade.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term));
+    }
+    
+    function renderCards() {
+      if (!weatherData || weatherData.length === 0) {
+        weatherGrid.innerHTML = '<div class="error"><i class="fas fa-cloud-rain"></i><p>Nenhum dado disponível</p><p style="font-size: 0.9rem; margin-top: 10px;">Tente atualizar a página</p></div>';
+        cityCountSpan.innerHTML = '<i class="fas fa-city"></i> 0 cidades';
+        return;
+      }
+      
+      const searchTerm = searchInput.value;
+      let filteredData = filterData(weatherData, searchTerm);
+      filteredData = sortData(filteredData, currentSort);
+      cityCountSpan.innerHTML = `<i class="fas fa-city"></i> ${filteredData.length} cidades`;
+      updateStats(filteredData);
+      
+      if (filteredData.length === 0) {
+        weatherGrid.innerHTML = `<div class="error"><i class="fas fa-search"></i><p>Nenhuma cidade encontrada para "${searchTerm}"</p></div>`;
+        return;
+      }
+      
+      weatherGrid.innerHTML = filteredData.map(city => `
+        <div class="card">
+          <div class="card-header">
+            <img class="weather-icon" src="${city.icone}" alt="weather icon" 
+                 onerror="this.src='/icones/Nublado.png'">
+            <div>
+              <div class="city-name"><i class="fas fa-map-marker-alt"></i> ${city.cidade}</div>
+              <div class="condition"><i class="fas fa-cloud"></i> ${city.condicao}</div>
+            </div>
+          </div>
+          <div class="temp"><i class="fas fa-thermometer-half"></i> ${city.temperatura !== null ? city.temperatura + '°C' : '--°C'}</div>
+          <div class="details">
+            <div class="detail-item"><i class="fas fa-wind"></i> <span>Vento: ${city.vento !== null ? city.vento + ' km/h' : '--'}</span></div>
+            <div class="detail-item"><i class="fas fa-tint"></i> <span>Umidade: ${city.umidade !== null ? city.umidade + '%' : '--'}</span></div>
+            <div class="detail-item"><i class="fas fa-thermometer"></i> <span>Sensação: ${city.sensacao !== null ? city.sensacao + '°C' : '--'}</span></div>
+            <div class="detail-item"><i class="fas fa-clock"></i> <span>${city.atualizado || '--'}</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function fetchWeatherData() {
+      try {
+        const response = await fetch(API_URL, { 
+          cache: 'no-store', 
+          headers: { 'Cache-Control': 'no-cache' } 
+        });
+        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        if (!Array.isArray(data)) throw new Error('Formato inválido');
+        
+        weatherData = data;
+        renderCards();
+        updateTimeSpan.innerHTML = `<i class="fas fa-check-circle"></i> Atualização: ${formatDateTime()}`;
+        showToast(`✅ ${data.length} cidades atualizadas com sucesso!`);
+        console.log('✅ Dados atualizados:', data.length, 'cidades');
+      } catch (error) {
+        console.error('❌ Erro:', error);
+        updateTimeSpan.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Erro: ${formatDateTime()}`;
+        showToast(`❌ Erro ao carregar dados: ${error.message}`, true);
+        
+        try {
+          const fallbackResponse = await fetch('/clima.json');
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+              weatherData = fallbackData;
+              renderCards();
+              updateTimeSpan.innerHTML = `<i class="fas fa-database"></i> Dados em cache - ${formatDateTime()}`;
+              showToast(`📦 Usando dados em cache`, false);
+              return;
+            }
+          }
+        } catch (fallbackError) { }
+        
+        weatherGrid.innerHTML = `<div class="error"><i class="fas fa-exclamation-triangle"></i><p>Erro ao carregar dados</p><button class="btn" onclick="location.reload()" style="margin-top: 20px;"><i class="fas fa-rotate-right"></i> Tentar novamente</button></div>`;
+      }
+    }
+    
+    searchInput.addEventListener('input', renderCards);
+    sortTempBtn.addEventListener('click', () => { currentSort = 'temp'; renderCards(); });
+    sortNameBtn.addEventListener('click', () => { currentSort = 'name'; renderCards(); });
+    refreshBtn.addEventListener('click', () => { fetchWeatherData(); });
+    
+    fetchWeatherData();
+    setInterval(fetchWeatherData, UPDATE_INTERVAL);
+  </script>
+</body>
+</html>

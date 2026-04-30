@@ -2,13 +2,17 @@
 
 Dashboard de clima em tempo real para as 28 principais cidades da Paraíba, utilizando a API do OpenWeatherMap.
 
-![Clima Paraíba Demo](https://img.shields.io/badge/status-online-brightgreen)
+![Status](https://img.shields.io/website?url=https%3A%2F%2Fclima-paraiba.onrender.com)
 ![Node.js Version](https://img.shields.io/badge/node-%3E%3D14.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## 🌐 Acesse online
+
+**🔗 Live Demo:** [https://clima-paraiba.onrender.com](https://clima-paraiba.onrender.com)
+
 ## ✨ Funcionalidades
 
-- 🌡️ Temperatura atual em tempo real
+- 🌡️ Temperatura atual em tempo real (atualização a cada 30 minutos)
 - 💨 Velocidade do vento (km/h)
 - 💧 Umidade do ar
 - 🌡️ Sensação térmica
@@ -16,10 +20,13 @@ Dashboard de clima em tempo real para as 28 principais cidades da Paraíba, util
 - 🔍 Busca por cidade
 - 📊 Ordenação por nome ou temperatura
 - 📈 Estatísticas (média, cidade mais quente/fria)
-- 🔄 Atualização automática a cada 30 minutos
 - 📱 Design responsivo
+- 🚀 Hospedado na Render (gratuito)
 
 ## 🗺️ Cidades Monitoradas
+
+<details>
+<summary>Ver lista completa (28 cidades)</summary>
 
 | # | Cidade | # | Cidade |
 |---|--------|---|--------|
@@ -38,7 +45,9 @@ Dashboard de clima em tempo real para as 28 principais cidades da Paraíba, util
 | 13 | Conde | 27 | Rio Tinto |
 | 14 | Alhandra | 28 | Pedras de Fogo |
 
-## 🚀 Como executar
+</details>
+
+## 🚀 Como executar localmente
 
 ### Pré-requisitos
 
